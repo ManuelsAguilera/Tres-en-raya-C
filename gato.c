@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ncurses.h>
 
 #define BG 1
 #define REDX 3
 #define BLUEO 2
 
-#define BOARD_SIZE 3
+#define BOARD_SIZE 4
 #define START_X 5
 #define START_Y 1
 
@@ -21,6 +22,35 @@ typedef struct {
     int x2, y2;  // Esquina inferior derecha de la celda
 } Cell;
 
+typedef struct {
+	int x,y;
+	char text[20];
+	int color;
+} Button;
+
+void drawButton(Button* button)
+{
+
+	int len = strlen(button->text);
+	attron(COLOR_PAIR(button->color));
+	mvhline(button->y,button->x,ACS_BLOCK,len);
+	mvprintw(button->y+1,button->x,"%s",button->text);
+	mvhline(button->y+2,button->x,ACS_BLOCK,len);
+	attroff(COLOR_PAIR(button->color));
+	
+
+}
+
+int checkButton(Button button, MEVENT event)
+{
+	int inside_x = button.x >= event.x || event.x <= button.x+strlen(button.text);
+	int inside_y = button.y >= event.y || event.y <= button.y+3;
+	
+	return inside_x && inside_y;
+		
+}
+
+
 void mapBoard(Cell boardMap[3][3], CanvasData canvas) {
     int cell_width = (canvas.max_x / BOARD_SIZE) / 3;
     int cell_height = (canvas.max_y / BOARD_SIZE) / 3;
@@ -33,6 +63,19 @@ void mapBoard(Cell boardMap[3][3], CanvasData canvas) {
             boardMap[i][j].y2 = boardMap[i][j].y1 + cell_height;
         }
     }
+}
+
+void deconfTerminal()
+{
+	endwin();      
+    keypad(stdscr, FALSE);  // Deshabilitar teclas especiales
+    mousemask(0, NULL);     // Deshabilitar el mouse
+    echo();                 // Habilitar la impresión de teclas
+    curs_set(1);            // Mostrar el cursor
+    attroff(A_BOLD);        // Desactivar cualquier atributo especial
+    attroff(A_REVERSE);
+    attroff(A_UNDERLINE);
+    
 }
 
 CanvasData confTerminal()
@@ -49,7 +92,7 @@ CanvasData confTerminal()
 	if (!has_colors())
 	{
 		printw("Tu terminal no es compatible con el juego.");
-		getch();
+		deconfTerminal();
 		exit(1);
 	}
 
@@ -77,10 +120,12 @@ void printBackground(CanvasData canvas)
 	//Borde
 	attron(COLOR_PAIR(BG));
 	mvhline(START_Y,START_X,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
-	mvhline(START_Y+cell_y*4,START_X,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
+	mvhline(START_Y+cell_y*3,START_X,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
 
 	mvvline(START_Y,START_X,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
+	mvvline(START_Y,START_X-1,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
 	mvvline(START_Y,START_X+cell_x*3,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
+	mvvline(START_Y,START_X+cell_x*3+1,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
 	attroff(COLOR_PAIR(BG));
 	refresh();
 }
@@ -126,6 +171,32 @@ void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][
 	
 
 	
+}
+
+void printGameOver(CanvasData canvas, int state)
+{
+	//Si es un jugador, es porque gano, sino es empate.
+	int centerx = START_X+(canvas.max_x/BOARD_SIZE)/2;
+	int centery = START_Y+(canvas.max_y/BOARD_SIZE)/2;
+	switch (state)
+	{
+		case REDX:
+			attron(COLOR_PAIR(REDX));
+			mvprintw(centery,centerx-11,"¡GANADOR JUGADOR ROJO!");
+			attroff(COLOR_PAIR(REDX));
+			break;
+		case BLUEO:
+			attron(COLOR_PAIR(BLUEO));
+			mvprintw(centery,centerx-11,"¡GANADOR JUGADOR AZUL!");
+			attroff(COLOR_PAIR(BLUEO)); //se le resta la mitad de caracteres del titulo
+			break;
+		default:
+			attron(COLOR_PAIR(BG));
+			mvprintw(centery,centerx-8,"TERMINA EN EMPATE");
+			attroff(COLOR_PAIR(BG));
+			break;
+		
+	}
 }
 
 /**
@@ -185,14 +256,8 @@ bool findEndGame(int game[3][3], int turn)
 }
 
 
-
-
-
-int main()
+void startGameLoop(CanvasData canvas)
 {
-	initscr();
-	
-	CanvasData canvas = confTerminal();
 	int game[3][3] = {0};
 	Cell gameMap[3][3];
 	mapBoard(gameMap,canvas);
@@ -214,18 +279,70 @@ int main()
 		}
 
 		if (turn >5 && findEndGame(game,turn))
+		{
+			printGameOver(canvas, turn%2==0?REDX:BLUEO);
 			break;
+		}
+			
 
 	
 		if (turn==10)
-				break;
+		{
+			printGameOver(canvas, 0);
+			break;
+		}
+			
 		
 	}
 
 	
-	printw("FIN DEL JUEGO");
+	
 	refresh();
 	getch();
+}
+
+
+int main()
+{
+	initscr();
+		
+	CanvasData canvas = confTerminal();
+
+	//Hacer botones
+	
+	Button retryBtn = {(canvas.max_x/BOARD_SIZE)/2,
+						(canvas.max_y/BOARD_SIZE)+5,"Intentar de nuevo",REDX};
+	Button quitBtn = {(canvas.max_x/BOARD_SIZE)/2,
+						(canvas.max_y/BOARD_SIZE)+10,"Salir",BLUEO};
+	while (1)
+	{
+		clear();
+		startGameLoop(canvas);
+		drawButton(&retryBtn);
+		drawButton(&quitBtn);
+		refresh();
+		while (1) //Esperar respuesta.
+		{
+			MEVENT event;
+
+			int ch = getch();
+			if (ch == KEY_MOUSE && getmouse(&event) == OK) {
+				
+				if (checkButton(retryBtn,event))
+					break;
+				
+				if (checkButton(quitBtn,event))
+				{
+					printw("Quiting..\n");
+					deconfTerminal();
+					exit(0);
+				}
+			}
+			
+		}
+	}
+	
+
 	endwin();
 
 	return 0;
