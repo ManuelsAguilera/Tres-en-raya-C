@@ -85,7 +85,7 @@ void printBackground(CanvasData canvas)
 	refresh();
 }
 
-void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][3])
+void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][3],int* turn)
 {
 	
 	if (event->y < START_Y || event->y > START_Y+ canvas.max_y/BOARD_SIZE )
@@ -103,17 +103,27 @@ void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][
 					if (game[i][j] != 0)
 						return; //Ha sido seleccionado.
 					
-					game[i][j]=1;
-					attron(COLOR_PAIR(REDX));
-					mvprintw(event->y, event->x, "X");
-					attroff(COLOR_PAIR(REDX));
+					
+
+					
+					int player  = *turn %2 == 0? BLUEO: REDX;
+					
+					*turn = *turn+1;
+
+					game[i][j] = player;
+
+					//imprimir en pantalla
+					attron(COLOR_PAIR(player));
+					if (player == REDX)
+						mvprintw(event->y, event->x, "X");
+					if (player == BLUEO)
+						mvprintw(event->y, event->x,"O");
+					
+					attroff(COLOR_PAIR(player));
 				}
 		}
 	}
 	
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			mvprintw(5+i,30+j,"%d",game[i][j]);
 
 	
 }
@@ -121,6 +131,59 @@ void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][
 /**
  * Logica del juego
  */
+
+bool findEndGame(int game[3][3], int turn)
+{
+	int player = turn % 2 == 0? REDX: BLUEO;
+
+	//Revisar en el grafo unicamente si player gano.
+	int winCount; // si es 3 significa que gano.
+	for (int i = 0; i<3; i++)
+	{
+		winCount=0;
+		for (int j = 0; j < 3; j++)
+			if (player == game[i][j])
+				winCount++;
+			else
+				break;
+		if (winCount == 3)
+			return TRUE;
+	}
+
+	for (int i = 0; i<3; i++)
+	{
+		winCount=0;
+		for (int j = 0; j < 3; j++)
+			if (player == game[j][i])
+				winCount++;
+			else
+				break;
+		if (winCount == 3)
+			return TRUE;
+	}
+
+	//Revisar diagonal principal
+	winCount=0;
+	for (int i = 0; i < 3; i++)
+		if (player == game[i][i])
+			winCount++;
+		else
+			break;
+	if (winCount == 3)
+			return TRUE;
+	
+	//Revisar otra diagonal
+	winCount=0;
+	for (int i = 0; i < 3; i++)
+		if (player == game[i][2-i])
+			winCount++;
+		else
+			break;
+	if (winCount == 3)
+			return TRUE;
+	return FALSE;	
+}
+
 
 
 
@@ -138,19 +201,31 @@ int main()
 
 	MEVENT event; //struct (id,int coordenadas,
 		      // mmask_t vstate estado de los botones
+
+	int turn = 1;
 	while (1)
 	{
 		printBackground(canvas);
 		int ch = getch();
 		if (ch == KEY_MOUSE && getmouse(&event) == OK) {
-			printMove(&event,canvas,game,gameMap);
+			printMove(&event,canvas,game,gameMap,&turn);
+			//if (gameEnded())
 			refresh();
-			}
-		
+		}
+
+		if (turn >5 && findEndGame(game,turn))
+			break;
+
+	
+		if (turn==10)
+				break;
 		
 	}
 
 	
+	printw("FIN DEL JUEGO");
+	refresh();
+	getch();
 	endwin();
 
 	return 0;
