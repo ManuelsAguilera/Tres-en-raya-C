@@ -16,6 +16,25 @@ typedef struct CanvasData {
 	
 } CanvasData;
 
+typedef struct {
+    int x1, y1;  // Esquina superior izquierda de la celda
+    int x2, y2;  // Esquina inferior derecha de la celda
+} Cell;
+
+void mapBoard(Cell boardMap[3][3], CanvasData canvas) {
+    int cell_width = (canvas.max_x / BOARD_SIZE) / 3;
+    int cell_height = (canvas.max_y / BOARD_SIZE) / 3;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            boardMap[i][j].x1 = START_X + j * cell_width;
+            boardMap[i][j].y1 = START_Y + i * cell_height;
+            boardMap[i][j].x2 = boardMap[i][j].x1 + cell_width;
+            boardMap[i][j].y2 = boardMap[i][j].y1 + cell_height;
+        }
+    }
+}
+
 CanvasData confTerminal()
 {
 	CanvasData canvas;
@@ -66,7 +85,7 @@ void printBackground(CanvasData canvas)
 	refresh();
 }
 
-void printMove(MEVENT* event,CanvasData canvas, int game[3][3])
+void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][3])
 {
 	
 	if (event->y < START_Y || event->y > START_Y+ canvas.max_y/BOARD_SIZE )
@@ -74,17 +93,29 @@ void printMove(MEVENT* event,CanvasData canvas, int game[3][3])
 	if (event->x < START_X || event->x > START_X+ canvas.max_x/BOARD_SIZE )
 		return;
 
-	int fila = (event->y - START_Y);
-    int columna = (event->x - START_X);
+
+	for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            // Si el clic está dentro de esta celda
+            if (event->x > boardMap[i][j].x1 && event->x < boardMap[i][j].x2 &&
+                event->y > boardMap[i][j].y1 && event->y < boardMap[i][j].y2) {
+
+					if (game[i][j] != 0)
+						return; //Ha sido seleccionado.
+					
+					game[i][j]=1;
+					attron(COLOR_PAIR(REDX));
+					mvprintw(event->y, event->x, "X");
+					attroff(COLOR_PAIR(REDX));
+				}
+		}
+	}
+	
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			mvprintw(5+i,30+j,"%d",game[i][j]);
 
 	
-
-	//if (game[fila][columna] != 0 )
-	//	return;
-
-	attron(COLOR_PAIR(REDX));
-	mvprintw(event->y, event->x, "X");
-	attroff(COLOR_PAIR(REDX));
 }
 
 /**
@@ -100,7 +131,8 @@ int main()
 	
 	CanvasData canvas = confTerminal();
 	int game[3][3] = {0};
-	
+	Cell gameMap[3][3];
+	mapBoard(gameMap,canvas);
 		
 	
 
@@ -111,7 +143,7 @@ int main()
 		printBackground(canvas);
 		int ch = getch();
 		if (ch == KEY_MOUSE && getmouse(&event) == OK) {
-			printMove(&event,canvas,game);
+			printMove(&event,canvas,game,gameMap);
 			refresh();
 			}
 		
