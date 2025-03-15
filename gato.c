@@ -13,14 +13,14 @@
 typedef struct CanvasData {
 	int max_x;
 	int max_y;
-
+	
 } CanvasData;
 
 CanvasData confTerminal()
 {
 	CanvasData canvas;
 	getmaxyx(stdscr,canvas.max_y,canvas.max_x);
-	printw("filas: %d, columnas: %d",canvas.max_x, canvas.max_y);
+	
 	
 	keypad(stdscr,TRUE);
 	mousemask(BUTTON1_CLICKED,NULL);
@@ -66,12 +66,42 @@ void printBackground(CanvasData canvas)
 	refresh();
 }
 
+void printMove(MEVENT* event,CanvasData canvas, int game[3][3])
+{
+	
+	if (event->y < START_Y || event->y > START_Y+ canvas.max_y/BOARD_SIZE )
+		return;
+	if (event->x < START_X || event->x > START_X+ canvas.max_x/BOARD_SIZE )
+		return;
+
+	int fila = (event->y - START_Y);
+    int columna = (event->x - START_X);
+
+	
+
+	//if (game[fila][columna] != 0 )
+	//	return;
+
+	attron(COLOR_PAIR(REDX));
+	mvprintw(event->y, event->x, "X");
+	attroff(COLOR_PAIR(REDX));
+}
+
+/**
+ * Logica del juego
+ */
+
+
+
+
 int main()
 {
 	initscr();
 	
 	CanvasData canvas = confTerminal();
+	int game[3][3] = {0};
 	
+		
 	
 
 	MEVENT event; //struct (id,int coordenadas,
@@ -81,7 +111,7 @@ int main()
 		printBackground(canvas);
 		int ch = getch();
 		if (ch == KEY_MOUSE && getmouse(&event) == OK) {
-			mvprintw(event.y, event.x, "X");
+			printMove(&event,canvas,game);
 			refresh();
 			}
 		
