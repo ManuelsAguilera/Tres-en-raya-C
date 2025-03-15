@@ -7,7 +7,7 @@
 #define REDX 3
 #define BLUEO 2
 
-#define BOARD_SIZE 4
+#define BOARD_SIZE 2
 #define START_X 5
 #define START_Y 1
 
@@ -43,7 +43,7 @@ void drawButton(Button* button)
 
 int checkButton(Button button, MEVENT event)
 {
-	int inside_x = button.x >= event.x || event.x <= button.x+strlen(button.text);
+	int inside_x = button.x >= event.x || event.x <= button.x+(int)strlen(button.text);
 	int inside_y = button.y >= event.y || event.y <= button.y+3;
 	
 	return inside_x && inside_y;
@@ -298,7 +298,6 @@ void startGameLoop(CanvasData canvas)
 	
 	
 	refresh();
-	getch();
 }
 
 
@@ -310,10 +309,10 @@ int main()
 
 	//Hacer botones
 	
-	Button retryBtn = {(canvas.max_x/BOARD_SIZE)/2,
-						(canvas.max_y/BOARD_SIZE)+5,"Intentar de nuevo",REDX};
-	Button quitBtn = {(canvas.max_x/BOARD_SIZE)/2,
-						(canvas.max_y/BOARD_SIZE)+10,"Salir",BLUEO};
+	Button retryBtn = {((canvas.max_x/BOARD_SIZE)/2)-8+START_X,
+						(canvas.max_y/BOARD_SIZE)+1+START_Y,	"Intentar de nuevo",REDX};
+	Button quitBtn = {((canvas.max_x/BOARD_SIZE)/2)-3+START_X,
+						(canvas.max_y/BOARD_SIZE)+5+START_Y,	"Salir",BLUEO};
 	while (1)
 	{
 		clear();
