@@ -386,17 +386,6 @@ void startSingleGameLoop(CanvasData canvas)
 			int ch = getch();
 			if (ch == KEY_MOUSE && getmouse(&event) == OK) {
 				printMove(&event,canvas,game,gameMap,&turn);
-
-				mvprintw(4,0,"");
-					for (int i = 0; i < 3; i++)
-				{
-					for (int j = 0; j < 3; j++)
-					{
-						printw("%d ",game[i][j]);
-					}
-					printw("\n");
-				}
-				printw("Player's turn\n");
 				refresh();
 			}
 		}
