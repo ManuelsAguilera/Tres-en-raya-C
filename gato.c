@@ -7,8 +7,13 @@
 #define REDX 3
 #define BLUEO 2
 
+#define BOTX 1
+
+
 #define BOARD_SIZE 2
 
+
+//Configuraciones, y componentes:
 
 typedef struct CanvasData {
 	int max_x;
@@ -110,6 +115,8 @@ CanvasData confTerminal()
 	return canvas;
 }
 
+
+
 void printBackground(CanvasData canvas)
 {
 	int cell_x = canvas.max_x/BOARD_SIZE/3;
@@ -178,6 +185,23 @@ void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][
 	
 }
 
+void printBotMove(	CanvasData canvas,Cell boardMap[3][3],int response[2],int* turn)
+{
+	int player  = *turn %2 == 0? BLUEO: REDX;
+	*turn = *turn+1;
+	Cell cell = boardMap[response[0]][response[1]];
+	
+	int y = (cell.y1+cell.y2)/2; 
+	int x = (cell.x1+cell.x2)/2;
+
+	attron(COLOR_PAIR(player));
+	if (player == REDX)
+		mvprintw(y, x, "X");
+	if (player == BLUEO)
+		mvprintw(y, x,"O");
+	attroff(COLOR_PAIR(player));
+}
+
 void printGameOver(CanvasData canvas, int state)
 {
 	//Si es un jugador, es porque gano, sino es empate.
@@ -208,10 +232,11 @@ void printGameOver(CanvasData canvas, int state)
  * Logica del juego
  */
 
+
 bool findEndGame(int game[3][3], int turn)
 {
 	int player = turn % 2 == 0? REDX: BLUEO;
-
+	mvprintw(0,20,"Player: %d",player);
 	//Revisar en el grafo unicamente si player gano.
 	int winCount; // si es 3 significa que gano.
 	for (int i = 0; i<3; i++)
@@ -260,28 +285,122 @@ bool findEndGame(int game[3][3], int turn)
 	return FALSE;	
 }
 
-
-void startMultiGameLoop(CanvasData canvas)
+// Deberia retornar un puntero a un arreglo de 2 elementos.
+void findBotMove(int game[3][3], int turn,int response[2],int bot)
 {
+
+	//Ver si se puede ganar
+	int player = bot == BOTX? REDX: BLUEO;
+
+	if (turn > 4)
+	{
+		for (int i = 0; i<3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+				if (game[i][j] == 0 &&  game[i][j] != player)
+				{
+					game[i][j] = player;
+					if (findEndGame(game,turn+1))
+					{
+						
+						game[i][j] = 0;
+						response[0]=i;
+						response[1]=j;
+						return;
+					}
+						
+					game[i][j] = 0;
+				}
+		}	
+	}
+
+
+	//Elegir al azar
+	int i,j;
+	do
+	{
+		i = rand() % 3;
+		j = rand() % 3;
+	}
+	while (game[i][j] != 0);
+	response[0]=i;
+	response[1]=j;
+}
+
+
+// Menus, y graficas:
+void startSingleGameLoop(CanvasData canvas)
+{
+	
+	
 	int game[3][3] = {0};
 	Cell gameMap[3][3];
 	mapBoard(gameMap,canvas);
-		
-	
+	int turn = 1;
+	int response[2] = {0,0};
+
+	srand(time(NULL));
+	int bot = rand() % 2; //chooses between BOTX and BOTO
+	//choose wich player is bot
+	if (bot == BOTX)
+	{
+		attron(COLOR_PAIR(REDX));
+		mvprintw(0,0,"Bot is player X\n");
+		attroff(COLOR_PAIR(REDX));
+	}
+	else
+	{
+		attron(COLOR_PAIR(BLUEO));
+		mvprintw(0,0,"Bot is player O\n");
+		attroff(COLOR_PAIR(BLUEO));
+	}
 
 	MEVENT event; //struct (id,int coordenadas,
 		      // mmask_t vstate estado de los botones
 
-	int turn = 1;
+
 	while (1)
 	{
+		
 		printBackground(canvas);
-		int ch = getch();
-		if (ch == KEY_MOUSE && getmouse(&event) == OK) {
-			printMove(&event,canvas,game,gameMap,&turn);
-			//if (gameEnded())
+		
+		
+			
+		mvprintw(1,0,"Turno: %d\n",turn);
+		if (turn % 2 == bot)
+		{
+			
+			napms(500); //delay
+
+			response[0] = 0; response[1] = 0;
+			findBotMove(game,turn,response,bot);
+			printBotMove(canvas,gameMap,response,&turn);
+			
+			game[response[0]][response[1]] = turn % 2 == 0? REDX: BLUEO;
 			refresh();
+			napms(200);
 		}
+		else
+		{
+			//player's turn
+			int ch = getch();
+			if (ch == KEY_MOUSE && getmouse(&event) == OK) {
+				printMove(&event,canvas,game,gameMap,&turn);
+
+				mvprintw(4,0,"");
+					for (int i = 0; i < 3; i++)
+				{
+					for (int j = 0; j < 3; j++)
+					{
+						printw("%d ",game[i][j]);
+					}
+					printw("\n");
+				}
+				printw("Player's turn\n");
+				refresh();
+			}
+		}
+		
 
 		if (turn >5 && findEndGame(game,turn))
 		{
@@ -305,8 +424,9 @@ void startMultiGameLoop(CanvasData canvas)
 	refresh();
 }
 
+	//Luego poner en otro lado.
 
-void startSingleGameLoop(CanvasData canvas)
+void startMultiGameLoop(CanvasData canvas)
 {
 	int game[3][3] = {0};
 	Cell gameMap[3][3];
@@ -404,10 +524,6 @@ int main()
 		else
 			startSingleGameLoop(canvas);
 		
-			
-		
-
-
 	}
 	
 
