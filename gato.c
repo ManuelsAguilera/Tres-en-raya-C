@@ -8,12 +8,13 @@
 #define BLUEO 2
 
 #define BOARD_SIZE 2
-#define START_X 5
-#define START_Y 1
+
 
 typedef struct CanvasData {
 	int max_x;
 	int max_y;
+	int start_x;
+	int start_y;
 	
 } CanvasData;
 
@@ -52,13 +53,15 @@ int checkButton(Button button, MEVENT event)
 
 
 void mapBoard(Cell boardMap[3][3], CanvasData canvas) {
+
+
     int cell_width = (canvas.max_x / BOARD_SIZE) / 3;
     int cell_height = (canvas.max_y / BOARD_SIZE) / 3;
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            boardMap[i][j].x1 = START_X + j * cell_width;
-            boardMap[i][j].y1 = START_Y + i * cell_height;
+            boardMap[i][j].x1 = canvas.start_x + j * cell_width;
+            boardMap[i][j].y1 = canvas.start_y + i * cell_height;
             boardMap[i][j].x2 = boardMap[i][j].x1 + cell_width;
             boardMap[i][j].y2 = boardMap[i][j].y1 + cell_height;
         }
@@ -83,6 +86,8 @@ CanvasData confTerminal()
 	CanvasData canvas;
 	getmaxyx(stdscr,canvas.max_y,canvas.max_x);
 	
+	canvas.start_x = (canvas.max_x/2)-(canvas.max_x/BOARD_SIZE)/2;
+	canvas.start_y = (canvas.max_y/2)-(canvas.max_y/BOARD_SIZE)/2;
 	
 	keypad(stdscr,TRUE);
 	mousemask(BUTTON1_CLICKED,NULL);
@@ -110,22 +115,22 @@ void printBackground(CanvasData canvas)
 	int cell_x = canvas.max_x/BOARD_SIZE/3;
 	int cell_y = canvas.max_y/BOARD_SIZE/3;
 
-	mvhline(START_Y,START_X,ACS_HLINE,canvas.max_y/BOARD_SIZE);
+	mvhline(canvas.start_y,canvas.start_x,ACS_HLINE,canvas.max_y/BOARD_SIZE);
 	for (int i = 1; i <= 2 ; i++)
-		mvhline(START_Y+cell_y*i, START_X ,ACS_HLINE,canvas.max_x/BOARD_SIZE);
+		mvhline(canvas.start_y+cell_y*i, canvas.start_x ,ACS_HLINE,canvas.max_x/BOARD_SIZE);
 
 	for (int i = 1; i <= 2; i++)	
-		mvvline(START_Y, START_X + cell_x*i,ACS_VLINE,(canvas.max_y)/BOARD_SIZE);
+		mvvline(canvas.start_y, canvas.start_x + cell_x*i,ACS_VLINE,(canvas.max_y)/BOARD_SIZE);
 	
 	//Borde
 	attron(COLOR_PAIR(BG));
-	mvhline(START_Y,START_X,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
-	mvhline(START_Y+cell_y*3,START_X,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
+	mvhline(canvas.start_y,canvas.start_x,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
+	mvhline(canvas.start_y+cell_y*3,canvas.start_x,ACS_BLOCK,canvas.max_x/BOARD_SIZE);
 
-	mvvline(START_Y,START_X,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
-	mvvline(START_Y,START_X-1,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
-	mvvline(START_Y,START_X+cell_x*3,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
-	mvvline(START_Y,START_X+cell_x*3+1,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
+	mvvline(canvas.start_y,canvas.start_x,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
+	mvvline(canvas.start_y,canvas.start_x-1,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
+	mvvline(canvas.start_y,canvas.start_x+cell_x*3,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
+	mvvline(canvas.start_y,canvas.start_x+cell_x*3+1,ACS_BLOCK,canvas.max_y/BOARD_SIZE);
 	attroff(COLOR_PAIR(BG));
 	refresh();
 }
@@ -133,9 +138,9 @@ void printBackground(CanvasData canvas)
 void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][3],int* turn)
 {
 	
-	if (event->y < START_Y || event->y > START_Y+ canvas.max_y/BOARD_SIZE )
+	if (event->y < canvas.start_y || event->y > canvas.start_y+ canvas.max_y/BOARD_SIZE )
 		return;
-	if (event->x < START_X || event->x > START_X+ canvas.max_x/BOARD_SIZE )
+	if (event->x < canvas.start_x || event->x > canvas.start_x+ canvas.max_x/BOARD_SIZE )
 		return;
 
 
@@ -176,8 +181,8 @@ void printMove(MEVENT* event,CanvasData canvas, int game[3][3],Cell boardMap[3][
 void printGameOver(CanvasData canvas, int state)
 {
 	//Si es un jugador, es porque gano, sino es empate.
-	int centerx = START_X+(canvas.max_x/BOARD_SIZE)/2;
-	int centery = START_Y+(canvas.max_y/BOARD_SIZE)/2;
+	int centerx = canvas.start_x+(canvas.max_x/BOARD_SIZE)/2;
+	int centery = canvas.start_y+(canvas.max_y/BOARD_SIZE)/2;
 	switch (state)
 	{
 		case REDX:
@@ -256,7 +261,7 @@ bool findEndGame(int game[3][3], int turn)
 }
 
 
-void startGameLoop(CanvasData canvas)
+void startMultiGameLoop(CanvasData canvas)
 {
 	int game[3][3] = {0};
 	Cell gameMap[3][3];
@@ -295,9 +300,91 @@ void startGameLoop(CanvasData canvas)
 		
 	}
 
-	
+	getch();
 	
 	refresh();
+}
+
+
+void startSingleGameLoop(CanvasData canvas)
+{
+	int game[3][3] = {0};
+	Cell gameMap[3][3];
+	mapBoard(gameMap,canvas);
+		
+	
+
+	MEVENT event; //struct (id,int coordenadas,
+		      // mmask_t vstate estado de los botones
+
+	int turn = 1;
+	while (1)
+	{
+		printBackground(canvas);
+		int ch = getch();
+		if (ch == KEY_MOUSE && getmouse(&event) == OK) {
+			printMove(&event,canvas,game,gameMap,&turn);
+			//if (gameEnded())
+			refresh();
+		}
+
+		if (turn >5 && findEndGame(game,turn))
+		{
+			printGameOver(canvas, turn%2==0?REDX:BLUEO);
+			break;
+		}
+			
+
+	
+		if (turn==10)
+		{
+			printGameOver(canvas, 0);
+			break;
+		}
+			
+		
+	}
+
+	getch();
+	
+	refresh();
+}
+
+bool startMenuLoop(CanvasData canvas)
+{
+	//Centrar el boton
+	Button singleBtn = {canvas.max_x/2-5,canvas.max_y/2-4,"Un jugador",REDX};
+	Button multiBtn = {canvas.max_x/2-6,canvas.max_y/2,"Multijugador",BLUEO};
+	Button exitBtn = {canvas.max_x/2-3,canvas.max_y/2+4,"Cerrar",BG};
+
+	MEVENT event;
+
+	while (1)
+	{
+		drawButton(&singleBtn);
+		drawButton(&multiBtn);
+		drawButton(&exitBtn);
+		refresh();
+		int ch = getch();
+		if (ch == KEY_MOUSE && getmouse(&event) == OK)
+		{
+			if (checkButton(singleBtn,event))
+			{
+				clear();
+				return FALSE;
+			}
+			if (checkButton(multiBtn,event))
+			{
+				clear();
+				return TRUE;
+			}
+			if (checkButton(exitBtn,event))
+			{
+				deconfTerminal();
+				exit(0);
+			}
+		}
+	}
 }
 
 
@@ -307,38 +394,20 @@ int main()
 		
 	CanvasData canvas = confTerminal();
 
-	//Hacer botones
-	
-	Button retryBtn = {((canvas.max_x/BOARD_SIZE)/2)-8+START_X,
-						(canvas.max_y/BOARD_SIZE)+1+START_Y,	"Intentar de nuevo",REDX};
-	Button quitBtn = {((canvas.max_x/BOARD_SIZE)/2)-3+START_X,
-						(canvas.max_y/BOARD_SIZE)+5+START_Y,	"Salir",BLUEO};
 	while (1)
 	{
 		clear();
-		startGameLoop(canvas);
-		drawButton(&retryBtn);
-		drawButton(&quitBtn);
-		refresh();
-		while (1) //Esperar respuesta.
-		{
-			MEVENT event;
 
-			int ch = getch();
-			if (ch == KEY_MOUSE && getmouse(&event) == OK) {
-				
-				if (checkButton(retryBtn,event))
-					break;
-				
-				if (checkButton(quitBtn,event))
-				{
-					printw("Quiting..\n");
-					deconfTerminal();
-					exit(0);
-				}
-			}
+		//TRUE 1 == multiplayer, FALSE 0 == singleplayer
+		if (startMenuLoop(canvas) == TRUE)
+			startMultiGameLoop(canvas);
+		else
+			startSingleGameLoop(canvas);
+		
 			
-		}
+		
+
+
 	}
 	
 
