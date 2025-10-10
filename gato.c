@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ncurses.h>
+#include <time.h>
+
 
 #define BG 1
 #define REDX 3
@@ -12,6 +14,8 @@
 
 #define BOARD_SIZE 2
 
+//Para configurar si predecir al jugador
+#define SMART_MODE 1
 
 //Configuraciones, y componentes:
 
@@ -236,7 +240,7 @@ void printGameOver(CanvasData canvas, int state)
 bool findEndGame(int game[3][3], int turn)
 {
 	int player = turn % 2 == 0? REDX: BLUEO;
-	mvprintw(0,20,"Player: %d",player);
+	//mvprintw(0,20,"Player: %d",player);
 	//Revisar en el grafo unicamente si player gano.
 	int winCount; // si es 3 significa que gano.
 	for (int i = 0; i<3; i++)
@@ -294,6 +298,8 @@ void findBotMove(int game[3][3], int turn,int response[2],int bot)
 
 	if (turn > 4)
 	{
+		
+		
 		for (int i = 0; i<3; i++)
 		{
 			for (int j = 0; j < 3; j++)
@@ -311,7 +317,36 @@ void findBotMove(int game[3][3], int turn,int response[2],int bot)
 						
 					game[i][j] = 0;
 				}
-		}	
+		}
+
+
+		
+		//Si esta activo, buscara evitar que el jugador gane
+		//Pero con una probabilidad de no revisar de 3/4 inicialmente, y aumenta durante la partida
+		//Ya que sino es dificil ganar alguna vez 
+		if (SMART_MODE & (rand() % turn <3) )
+		{
+
+			for (int i = 0; i<3; i++)
+			{
+				for (int j = 0; j < 3; j++)
+					if (game[i][j] == 0 &&  game[i][j] != player)
+					{
+						game[i][j] = player;
+						if (findEndGame(game,turn))
+						{
+							
+							game[i][j] = 0;
+							response[0]=i;
+							response[1]=j;
+							return;
+						}
+							
+						game[i][j] = 0;
+					}
+			}		
+		}
+	
 	}
 
 
